@@ -1,6 +1,10 @@
 package kitchenpos.application;
 
+<<<<<<< HEAD
 import kitchenpos.domain.Order;
+=======
+import java.util.function.Predicate;
+>>>>>>> bb5330a (Refactor test codes to be more resistant to refactoring.)
 import kitchenpos.domain.OrderRepository;
 import kitchenpos.domain.OrderStatus;
 import kitchenpos.domain.OrderTable;
@@ -41,7 +45,7 @@ public class OrderTableService {
         final OrderTable orderTable = orderTableRepository.findById(orderTableId)
             .orElseThrow(NoSuchElementException::new);
         orderTable.sit();
-        return orderTableRepository.save(orderTable);
+        return orderTable;
     }
 
     @Transactional
@@ -52,11 +56,17 @@ public class OrderTableService {
             throw new IllegalStateException();
         }
         orderTable.clear();
-        return orderTableRepository.save(orderTable);
+        return orderTable;
     }
 
     private boolean canNotBeCleared(OrderTable orderTable) {
         return orderRepository.existsByOrderTableAndStatusNot(orderTable, OrderStatus.COMPLETED);
+    }
+
+    @Transactional(readOnly = true)
+    public OrderTable findNotEmptyById(UUID id) {
+        return orderTableRepository.findById(id).filter(Predicate.not(OrderTable::isEmpty))
+            .orElseThrow(NoSuchElementException::new);
     }
 
     @Transactional

@@ -7,8 +7,10 @@ import javax.persistence.Id;
 import javax.persistence.Table;
 import java.math.BigDecimal;
 import java.util.UUID;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 
+@AllArgsConstructor
 @Builder
 @Table(name = "product")
 @Entity
@@ -43,7 +45,7 @@ public class Product {
     public String getName() {
         return name;
     }
-b
+
     public void setName(final String name) {
         this.name = name;
     }

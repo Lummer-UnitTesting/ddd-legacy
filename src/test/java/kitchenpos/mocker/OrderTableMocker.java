@@ -1,10 +1,7 @@
 package kitchenpos.mocker;
 
-import java.math.BigDecimal;
 import java.util.UUID;
 import kitchenpos.domain.OrderTable;
-import kitchenpos.domain.Product;
-import kitchenpos.mocker.ProductMocker.ProductMockBuilder;
 import org.springframework.lang.Nullable;
 
 public class OrderTableMocker {
@@ -12,8 +9,18 @@ public class OrderTableMocker {
     return OrderTable.builder()
         .id(UUID.randomUUID())
         .name("dummy")
+        .empty(true)
         .build();
   }
+
+  public static OrderTable createNotEmptyTable() {
+    return OrderTable.builder()
+        .id(UUID.randomUUID())
+        .name("dummy")
+        .empty(false)
+        .build();
+  }
+
 
   public static class OrderTableMockBuilder {
     private final OrderTable.OrderTableBuilder builder;

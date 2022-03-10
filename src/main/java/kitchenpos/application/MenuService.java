@@ -92,4 +92,11 @@ public class MenuService {
             }
         }
     }
+
+    @Transactional(readOnly = true)
+    public Menu findDisplayedById(UUID id) {
+        return menuRepository.findById(id)
+            .filter(Menu::isDisplayed)
+            .orElseThrow(NoSuchElementException::new);
+    }
 }

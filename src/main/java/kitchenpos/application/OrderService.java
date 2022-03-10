@@ -1,94 +1,62 @@
 package kitchenpos.application;
 
-import kitchenpos.domain.*;
+import static kitchenpos.domain.OrderType.EAT_IN;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.UUID;
+import kitchenpos.domain.Order;
+import kitchenpos.domain.OrderLineItem;
+import kitchenpos.domain.OrderRepository;
+import kitchenpos.domain.OrderStatus;
+import kitchenpos.domain.OrderTable;
+import kitchenpos.domain.OrderType;
 import kitchenpos.infra.KitchenridersClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
-
 @Service
 public class OrderService {
     private final OrderRepository orderRepository;
-    private final MenuRepository menuRepository;
-    private final OrderTableRepository orderTableRepository;
+    private final OrderLineItemService orderLineItemService;
+    private final OrderTableService orderTableService;
     private final KitchenridersClient kitchenridersClient;
 
     public OrderService(
         final OrderRepository orderRepository,
-        final MenuRepository menuRepository,
-        final OrderTableRepository orderTableRepository,
+        final OrderLineItemService orderLineItemService,
+        final OrderTableService orderTableService,
         final KitchenridersClient kitchenridersClient
     ) {
         this.orderRepository = orderRepository;
-        this.menuRepository = menuRepository;
-        this.orderTableRepository = orderTableRepository;
+        this.orderLineItemService = orderLineItemService;
+        this.orderTableService = orderTableService;
         this.kitchenridersClient = kitchenridersClient;
     }
 
     @Transactional
     public Order create(final Order request) {
         final OrderType type = request.getType();
-        if (Objects.isNull(type)) {
-            throw new IllegalArgumentException();
-        }
-        final List<OrderLineItem> orderLineItemRequests = request.getOrderLineItems();
-        if (Objects.isNull(orderLineItemRequests) || orderLineItemRequests.isEmpty()) {
-            throw new IllegalArgumentException();
-        }
-        final List<Menu> menus = menuRepository.findAllById(
-            orderLineItemRequests.stream()
-                .map(OrderLineItem::getMenuId)
-                .collect(Collectors.toList())
-        );
-        if (menus.size() != orderLineItemRequests.size()) {
-            throw new IllegalArgumentException();
-        }
-        final List<OrderLineItem> orderLineItems = new ArrayList<>();
-        for (final OrderLineItem orderLineItemRequest : orderLineItemRequests) {
-            final long quantity = orderLineItemRequest.getQuantity();
-            if (type != OrderType.EAT_IN) {
-                if (quantity < 0) {
-                    throw new IllegalArgumentException();
-                }
-            }
-            final Menu menu = menuRepository.findById(orderLineItemRequest.getMenuId())
-                .orElseThrow(NoSuchElementException::new);
-            if (!menu.isDisplayed()) {
-                throw new IllegalArgumentException();
-            }
-            if (menu.getPrice().compareTo(orderLineItemRequest.getPrice()) != 0) {
-                throw new IllegalArgumentException();
-            }
-            final OrderLineItem orderLineItem = new OrderLineItem();
-            orderLineItem.setMenu(menu);
-            orderLineItem.setQuantity(quantity);
-            orderLineItems.add(orderLineItem);
-        }
-        Order order = new Order();
-        order.setId(UUID.randomUUID());
-        order.setType(type);
-        order.setStatus(OrderStatus.WAITING);
-        order.setOrderDateTime(LocalDateTime.now());
-        order.setOrderLineItems(orderLineItems);
-        if (type == OrderType.DELIVERY) {
-            final String deliveryAddress = request.getDeliveryAddress();
-            if (Objects.isNull(deliveryAddress) || deliveryAddress.isEmpty()) {
-                throw new IllegalArgumentException();
-            }
-            order.setDeliveryAddress(deliveryAddress);
-        }
-        if (type == OrderType.EAT_IN) {
-            final OrderTable orderTable = orderTableRepository.findById(request.getOrderTableId())
-                .orElseThrow(NoSuchElementException::new);
-            if (orderTable.isEmpty()) {
-                throw new IllegalStateException();
-            }
+        final List<OrderLineItem> orderLineItems =
+            orderLineItemService.create(request.getOrderLineItems(), type);
+
+        Order order = Order.builder()
+            .id(UUID.randomUUID())
+            .type(type)
+            .deliveryAddress(request.getDeliveryAddress())
+            .status(OrderStatus.WAITING)
+            .orderDateTime(LocalDateTime.now())
+            .orderLineItems(orderLineItems)
+            .build();
+
+        if(type == EAT_IN) {
+            final OrderTable orderTable =
+                orderTableService.findNotEmptyById(request.getOrderTableId());
             order.setOrderTable(orderTable);
         }
+
         return orderRepository.save(order);
     }
 

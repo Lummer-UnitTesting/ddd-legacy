@@ -1,10 +1,12 @@
 package kitchenpos.domain;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.EnumSource.Mode.EXCLUDE;
 
 import kitchenpos.domain.fixture.OrderFixture;
+import kitchenpos.mocker.OrderMocker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -161,5 +163,29 @@ public class OrderTest {
     // then
     assertEquals(OrderStatus.COMPLETED, eatInOrder.getStatus());
     assertEquals(OrderStatus.COMPLETED, deliveryOrder.getStatus());
+  }
+
+  @Test
+  void 배달_주소를_입력할_경우_비어있으면_안된다() {
+    Order order = OrderMocker.create();
+
+    assertThatThrownBy(() -> order.setDeliveryAddress(null))
+        .isExactlyInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void 주문_형식은_비어있을_수_없다() {
+    Order order = OrderMocker.create();
+
+    assertThatThrownBy(() -> order.setType(null))
+        .isExactlyInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void 주문_목록은_비어있을_수_없다() {
+    Order order = OrderMocker.create();
+
+    assertThatThrownBy(() -> order.setOrderLineItems(null))
+        .isExactlyInstanceOf(IllegalArgumentException.class);
   }
 }
