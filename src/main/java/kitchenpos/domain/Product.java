@@ -1,12 +1,15 @@
 package kitchenpos.domain;
 
+import java.util.Objects;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
 import java.math.BigDecimal;
 import java.util.UUID;
+import lombok.Builder;
 
+@Builder
 @Table(name = "product")
 @Entity
 public class Product {
@@ -40,7 +43,7 @@ public class Product {
     public String getName() {
         return name;
     }
-
+b
     public void setName(final String name) {
         this.name = name;
     }
@@ -51,5 +54,9 @@ public class Product {
 
     public void setPrice(final BigDecimal price) {
         this.price = price;
+    }
+
+    public boolean hasInvalidPrice() {
+        return !Objects.isNull(price) && price.compareTo(BigDecimal.ZERO) >= 0;
     }
 }
