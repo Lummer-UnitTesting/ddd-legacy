@@ -1,11 +1,14 @@
 package kitchenpos.domain;
 
+import java.util.Objects;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
 import java.util.UUID;
+import lombok.Builder;
 
+@Builder
 @Table(name = "order_table")
 @Entity
 public class OrderTable {
@@ -62,8 +65,16 @@ public class OrderTable {
         this.empty = empty;
     }
 
+    public boolean hasValidName() {
+        return Objects.isNull(name) || name.isEmpty();
+    }
+
+    public void sit() {
+        setEmpty(false);
+    }
+
     public void clear() {
-        this.numberOfGuests = 0;
-        this.empty = true;
+        setNumberOfGuests(0);
+        setEmpty(true);
     }
 }
