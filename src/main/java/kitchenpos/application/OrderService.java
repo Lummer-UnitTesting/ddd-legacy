@@ -94,88 +94,48 @@ public class OrderService {
 
     @Transactional
     public Order accept(final UUID orderId) {
-        final Order order = orderRepository.findById(orderId)
-            .orElseThrow(NoSuchElementException::new);
-        if (order.getStatus() != OrderStatus.WAITING) {
-            throw new IllegalStateException();
-        }
+        final Order order = fetchById(orderId);
+
         if (order.getType() == OrderType.DELIVERY) {
-            BigDecimal sum = BigDecimal.ZERO;
-            for (final OrderLineItem orderLineItem : order.getOrderLineItems()) {
-                sum = orderLineItem.getMenu()
-                    .getPrice()
-                    .multiply(BigDecimal.valueOf(orderLineItem.getQuantity()));
-            }
+            BigDecimal sum = order.calculateSum();
             kitchenridersClient.requestDelivery(orderId, sum, order.getDeliveryAddress());
         }
-        order.setStatus(OrderStatus.ACCEPTED);
-        return order;
+
+        return order.changeToNextStatus(OrderStatus.ACCEPTED);
     }
 
     @Transactional
     public Order serve(final UUID orderId) {
-        final Order order = orderRepository.findById(orderId)
-            .orElseThrow(NoSuchElementException::new);
-        if (order.getStatus() != OrderStatus.ACCEPTED) {
-            throw new IllegalStateException();
-        }
-        order.setStatus(OrderStatus.SERVED);
-        return order;
+        final Order order = fetchById(orderId);
+        return order.changeToNextStatus(OrderStatus.SERVED);
     }
 
     @Transactional
     public Order startDelivery(final UUID orderId) {
-        final Order order = orderRepository.findById(orderId)
-            .orElseThrow(NoSuchElementException::new);
-        if (order.getType() != OrderType.DELIVERY) {
-            throw new IllegalStateException();
-        }
-        if (order.getStatus() != OrderStatus.SERVED) {
-            throw new IllegalStateException();
-        }
-        order.setStatus(OrderStatus.DELIVERING);
-        return order;
+        final Order order = fetchById(orderId);
+        return order.changeToNextStatus(OrderStatus.DELIVERING);
     }
 
     @Transactional
     public Order completeDelivery(final UUID orderId) {
-        final Order order = orderRepository.findById(orderId)
-            .orElseThrow(NoSuchElementException::new);
-        if (order.getType() != OrderType.DELIVERY) {
-            throw new IllegalStateException();
-        }
-        if (order.getStatus() != OrderStatus.DELIVERING) {
-            throw new IllegalStateException();
-        }
-        order.setStatus(OrderStatus.DELIVERED);
-        return order;
+        final Order order = fetchById(orderId);
+        return order.changeToNextStatus(OrderStatus.DELIVERED);
     }
 
     @Transactional
     public Order complete(final UUID orderId) {
-        final Order order = orderRepository.findById(orderId)
-            .orElseThrow(NoSuchElementException::new);
-        final OrderType type = order.getType();
-        final OrderStatus status = order.getStatus();
-        if (type == OrderType.DELIVERY) {
-            if (status != OrderStatus.DELIVERED) {
-                throw new IllegalStateException();
-            }
+        final Order order = fetchById(orderId);
+
+        if (order.getType() == OrderType.EAT_IN) {
+            order.getOrderTable().clear();
         }
-        if (type == OrderType.TAKEOUT || type == OrderType.EAT_IN) {
-            if (status != OrderStatus.SERVED) {
-                throw new IllegalStateException();
-            }
-        }
-        order.setStatus(OrderStatus.COMPLETED);
-        if (type == OrderType.EAT_IN) {
-            final OrderTable orderTable = order.getOrderTable();
-            if (!orderRepository.existsByOrderTableAndStatusNot(orderTable, OrderStatus.COMPLETED)) {
-                orderTable.setNumberOfGuests(0);
-                orderTable.setEmpty(true);
-            }
-        }
-        return order;
+
+        return order.changeToNextStatus(OrderStatus.COMPLETED);
+    }
+
+    @Transactional(readOnly = true)
+    public Order fetchById(final UUID orderId) {
+        return orderRepository.findById(orderId).orElseThrow(NoSuchElementException::new);
     }
 
     @Transactional(readOnly = true)

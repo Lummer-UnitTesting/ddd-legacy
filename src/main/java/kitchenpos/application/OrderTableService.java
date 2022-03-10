@@ -1,5 +1,6 @@
 package kitchenpos.application;
 
+import kitchenpos.domain.Order;
 import kitchenpos.domain.OrderRepository;
 import kitchenpos.domain.OrderStatus;
 import kitchenpos.domain.OrderTable;
@@ -69,6 +70,13 @@ public class OrderTableService {
         }
         orderTable.setNumberOfGuests(numberOfGuests);
         return orderTable;
+    }
+
+    public void clearTable(Order order) {
+        final OrderTable orderTable = order.getOrderTable();
+        if (!orderRepository.existsByOrderTableAndStatusNot(orderTable, OrderStatus.COMPLETED)) {
+            orderTable.clear();
+        }
     }
 
     @Transactional(readOnly = true)
