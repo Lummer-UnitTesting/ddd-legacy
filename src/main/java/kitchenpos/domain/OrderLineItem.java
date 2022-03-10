@@ -32,6 +32,13 @@ public class OrderLineItem {
     public OrderLineItem() {
     }
 
+    public OrderLineItem(Menu menu, long quantity, BigDecimal price) {
+        this.menu = menu;
+        this.quantity = quantity;
+        this.price = price;
+        this.menuId = menu.getId();
+    }
+
     public Long getSeq() {
         return seq;
     }
@@ -70,5 +77,9 @@ public class OrderLineItem {
 
     public void setPrice(final BigDecimal price) {
         this.price = price;
+    }
+
+    public BigDecimal calculateTotalPrice() {
+        return menu.getPrice().multiply(BigDecimal.valueOf(quantity));
     }
 }

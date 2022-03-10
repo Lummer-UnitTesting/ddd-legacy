@@ -25,6 +25,11 @@ public class OrderTable {
     public OrderTable() {
     }
 
+    public OrderTable(String name) {
+        this.name = name;
+        clear();
+    }
+
     public UUID getId() {
         return id;
     }
@@ -55,5 +60,10 @@ public class OrderTable {
 
     public void setEmpty(final boolean empty) {
         this.empty = empty;
+    }
+
+    public void clear() {
+        this.numberOfGuests = 0;
+        this.empty = true;
     }
 }

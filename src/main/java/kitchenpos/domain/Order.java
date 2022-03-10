@@ -1,9 +1,12 @@
 package kitchenpos.domain;
 
+import java.math.BigDecimal;
+import java.util.NoSuchElementException;
 import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.transaction.annotation.Transactional;
 
 @Table(name = "orders")
 @Entity
@@ -111,5 +114,27 @@ public class Order {
 
     public void setOrderTableId(final UUID orderTableId) {
         this.orderTableId = orderTableId;
+    }
+
+    public BigDecimal calculateSum() {
+        BigDecimal sum = BigDecimal.ZERO;
+
+        for (final OrderLineItem orderLineItem : orderLineItems) {
+            sum = sum.add(orderLineItem.calculateTotalPrice());
+        }
+
+        return sum;
+    }
+
+    public Order changeToNextStatus(OrderStatus nextStatus) {
+        boolean isDelivery = type == OrderType.DELIVERY;
+
+        if (!nextStatus.equals(OrderStatus.nextStatus(status, isDelivery))) {
+            throw new IllegalStateException();
+        }
+
+        this.status = nextStatus;
+
+        return this;
     }
 }
