@@ -1,5 +1,6 @@
 package kitchenpos.application;
 
+import java.util.NoSuchElementException;
 import kitchenpos.domain.MenuGroup;
 import kitchenpos.domain.MenuGroupRepository;
 import org.springframework.stereotype.Service;
@@ -19,14 +20,12 @@ public class MenuGroupService {
 
     @Transactional
     public MenuGroup create(final MenuGroup request) {
-        final String name = request.getName();
-        if (Objects.isNull(name) || name.isEmpty()) {
-            throw new IllegalArgumentException();
-        }
-        final MenuGroup menuGroup = new MenuGroup();
-        menuGroup.setId(UUID.randomUUID());
-        menuGroup.setName(name);
+        final MenuGroup menuGroup = new MenuGroup(request.getName());
         return menuGroupRepository.save(menuGroup);
+    }
+
+    public MenuGroup fetchById(UUID id) {
+        return menuGroupRepository.findById(id).orElseThrow(NoSuchElementException::new);
     }
 
     @Transactional(readOnly = true)

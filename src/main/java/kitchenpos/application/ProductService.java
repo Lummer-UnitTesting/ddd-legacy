@@ -68,6 +68,11 @@ public class ProductService {
         return product;
     }
 
+    public Product fetchById(UUID productId) {
+        return productRepository.findById(productId)
+            .orElseThrow(NoSuchElementException::new);
+    }
+
     @Transactional(readOnly = true)
     public List<Product> findAll() {
         return productRepository.findAll();
