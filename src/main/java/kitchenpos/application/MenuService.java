@@ -74,4 +74,29 @@ public class MenuService {
     public List<Menu> findAll() {
         return menuRepository.findAll();
     }
+
+    @Transactional
+    public void hideInvalidPriceMenu(final UUID productId) {
+        final List<Menu> menus = menuRepository.findAllByProductId(productId);
+
+        for (final Menu menu : menus) {
+            BigDecimal sum = BigDecimal.ZERO;
+            for (final MenuProduct menuProduct : menu.getMenuProducts()) {
+                sum = menuProduct.getProduct()
+                    .getPrice()
+                    .multiply(BigDecimal.valueOf(menuProduct.getQuantity()));
+            }
+            if (menu.getPrice().compareTo(sum) > 0) {
+                menu.setDisplayed(false);
+                menuRepository.save(menu);
+            }
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public Menu findDisplayedById(UUID id) {
+        return menuRepository.findById(id)
+            .filter(Menu::isDisplayed)
+            .orElseThrow(NoSuchElementException::new);
+    }
 }

@@ -1,13 +1,27 @@
 package kitchenpos.domain;
 
 import java.math.BigDecimal;
-import java.util.NoSuchElementException;
-import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
-import org.springframework.transaction.annotation.Transactional;
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.ForeignKey;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
+import javax.persistence.Table;
+import javax.persistence.Transient;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 
+@AllArgsConstructor
+@Builder
 @Table(name = "orders")
 @Entity
 public class Order {
@@ -65,6 +79,7 @@ public class Order {
     }
 
     public void setType(final OrderType type) {
+        validateType(type);
         this.type = type;
     }
 
@@ -89,6 +104,7 @@ public class Order {
     }
 
     public void setOrderLineItems(final List<OrderLineItem> orderLineItems) {
+        validateOrderLineItems(orderLineItems);
         this.orderLineItems = orderLineItems;
     }
 
@@ -97,6 +113,7 @@ public class Order {
     }
 
     public void setDeliveryAddress(final String deliveryAddress) {
+        validDeliveryAddress(deliveryAddress);
         this.deliveryAddress = deliveryAddress;
     }
 
@@ -136,5 +153,27 @@ public class Order {
         this.status = nextStatus;
 
         return this;
+    }
+
+    private void validDeliveryAddress(String deliveryAddress) {
+        if (type == OrderType.DELIVERY) {
+            throw new IllegalArgumentException();
+        }
+
+        if (Objects.isNull(deliveryAddress) || deliveryAddress.isEmpty()) {
+            throw new IllegalArgumentException();
+        }
+    }
+
+    private void validateType(final OrderType type) {
+        if (Objects.isNull(type)) {
+            throw new IllegalArgumentException();
+        }
+    }
+
+    private void validateOrderLineItems(final List<OrderLineItem> orderLineItems) {
+        if (Objects.isNull(orderLineItems) || orderLineItems.isEmpty()) {
+            throw new IllegalArgumentException();
+        }
     }
 }

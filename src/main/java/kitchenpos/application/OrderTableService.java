@@ -1,6 +1,10 @@
 package kitchenpos.application;
 
+<<<<<<< HEAD
 import kitchenpos.domain.Order;
+=======
+import java.util.function.Predicate;
+>>>>>>> bb5330a (Refactor test codes to be more resistant to refactoring.)
 import kitchenpos.domain.OrderRepository;
 import kitchenpos.domain.OrderStatus;
 import kitchenpos.domain.OrderTable;
@@ -10,7 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -25,15 +28,15 @@ public class OrderTableService {
 
     @Transactional
     public OrderTable create(final OrderTable request) {
-        final String name = request.getName();
-        if (Objects.isNull(name) || name.isEmpty()) {
+        if (!request.hasValidName()) {
             throw new IllegalArgumentException();
         }
-        final OrderTable orderTable = new OrderTable();
-        orderTable.setId(UUID.randomUUID());
-        orderTable.setName(name);
-        orderTable.setNumberOfGuests(0);
-        orderTable.setEmpty(true);
+        final OrderTable orderTable = OrderTable.builder()
+            .id(UUID.randomUUID())
+            .name(request.getName())
+            .numberOfGuests(0)
+            .empty(true)
+            .build();
         return orderTableRepository.save(orderTable);
     }
 
@@ -41,7 +44,7 @@ public class OrderTableService {
     public OrderTable sit(final UUID orderTableId) {
         final OrderTable orderTable = orderTableRepository.findById(orderTableId)
             .orElseThrow(NoSuchElementException::new);
-        orderTable.setEmpty(false);
+        orderTable.sit();
         return orderTable;
     }
 
@@ -49,12 +52,21 @@ public class OrderTableService {
     public OrderTable clear(final UUID orderTableId) {
         final OrderTable orderTable = orderTableRepository.findById(orderTableId)
             .orElseThrow(NoSuchElementException::new);
-        if (orderRepository.existsByOrderTableAndStatusNot(orderTable, OrderStatus.COMPLETED)) {
+        if (canNotBeCleared(orderTable)) {
             throw new IllegalStateException();
         }
-        orderTable.setNumberOfGuests(0);
-        orderTable.setEmpty(true);
+        orderTable.clear();
         return orderTable;
+    }
+
+    private boolean canNotBeCleared(OrderTable orderTable) {
+        return orderRepository.existsByOrderTableAndStatusNot(orderTable, OrderStatus.COMPLETED);
+    }
+
+    @Transactional(readOnly = true)
+    public OrderTable findNotEmptyById(UUID id) {
+        return orderTableRepository.findById(id).filter(Predicate.not(OrderTable::isEmpty))
+            .orElseThrow(NoSuchElementException::new);
     }
 
     @Transactional

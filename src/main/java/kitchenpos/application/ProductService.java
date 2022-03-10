@@ -1,80 +1,88 @@
 package kitchenpos.application;
 
-import kitchenpos.domain.*;
-import kitchenpos.infra.PurgomalumClient;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.UUID;
+import kitchenpos.domain.Product;
+import kitchenpos.domain.ProductRepository;
+import kitchenpos.infra.PurgomalumClient;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ProductService {
     private final ProductRepository productRepository;
-    private final MenuRepository menuRepository;
     private final PurgomalumClient purgomalumClient;
+    private final MenuService menuService;
 
+    @Autowired
     public ProductService(
         final ProductRepository productRepository,
-        final MenuRepository menuRepository,
-        final PurgomalumClient purgomalumClient
+        final PurgomalumClient purgomalumClient,
+        final MenuService menuService
     ) {
         this.productRepository = productRepository;
-        this.menuRepository = menuRepository;
         this.purgomalumClient = purgomalumClient;
+        this.menuService = menuService;
     }
 
     @Transactional
     public Product create(final Product request) {
-        final BigDecimal price = request.getPrice();
-        if (Objects.isNull(price) || price.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException();
-        }
-        final String name = request.getName();
-        if (Objects.isNull(name) || purgomalumClient.containsProfanity(name)) {
-            throw new IllegalArgumentException();
-        }
-        final Product product = new Product();
-        product.setId(UUID.randomUUID());
-        product.setName(name);
-        product.setPrice(price);
+        validateOnCreate(request);
+
+        Product product = Product.builder()
+            .id(UUID.randomUUID())
+            .name(request.getName())
+            .price(request.getPrice())
+            .build();
+
         return productRepository.save(product);
     }
 
     @Transactional
     public Product changePrice(final UUID productId, final Product request) {
-        final BigDecimal price = request.getPrice();
-        if (Objects.isNull(price) || price.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException();
-        }
-        final Product product = productRepository.findById(productId)
-            .orElseThrow(NoSuchElementException::new);
-        product.setPrice(price);
-        final List<Menu> menus = menuRepository.findAllByProductId(productId);
-        for (final Menu menu : menus) {
-            BigDecimal sum = BigDecimal.ZERO;
-            for (final MenuProduct menuProduct : menu.getMenuProducts()) {
-                sum = menuProduct.getProduct()
-                    .getPrice()
-                    .multiply(BigDecimal.valueOf(menuProduct.getQuantity()));
-            }
-            if (menu.getPrice().compareTo(sum) > 0) {
-                menu.setDisplayed(false);
-            }
-        }
-        return product;
-    }
+        validateOnUpdate(request);
 
-    public Product fetchById(UUID productId) {
-        return productRepository.findById(productId)
-            .orElseThrow(NoSuchElementException::new);
+        final Product product = fetchById(productId);
+        final BigDecimal price = request.getPrice();
+        product.setPrice(price);
+        final Product updated = productRepository.save(product);
+
+        afterUpdate(updated);
+        return updated;
     }
 
     @Transactional(readOnly = true)
     public List<Product> findAll() {
         return productRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public Product fetchById(final UUID id) {
+        return productRepository.findById(id)
+            .orElseThrow(NoSuchElementException::new);
+    }
+
+    // Bean Validation 대체 가능
+    private void validateOnCreate(Product product) {
+        if (product.hasInvalidPrice()) {
+            throw new IllegalArgumentException();
+        }
+        if (purgomalumClient.containsProfanity(product.getName())) {
+            throw new IllegalArgumentException();
+        }
+    }
+
+    private void validateOnUpdate(Product product) {
+        if (product.hasInvalidPrice()) {
+            throw new IllegalArgumentException();
+        }
+    }
+
+    // model stream
+    private void afterUpdate(Product updated) {
+        menuService.hideInvalidPriceMenu(updated.getId());
     }
 }

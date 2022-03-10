@@ -19,6 +19,10 @@ public class PurgomalumClient {
     }
 
     public boolean containsProfanity(final String text) {
+        if (text == null) {
+            return false;
+        }
+
         final URI url = UriComponentsBuilder.fromUriString("https://www.purgomalum.com/service/containsprofanity")
             .queryParam("text", text)
             .build()
